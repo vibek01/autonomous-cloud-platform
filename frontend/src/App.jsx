@@ -11,15 +11,15 @@ import { LogPanel } from './components/LogPanel';
 import { TopologyPanel } from './components/TopologyPanel';
 
 export default function App() {
-  const { metrics, currentMetrics } = useMetrics();
+  const { clusterState, status } = useCluster();
+  const { metrics, currentMetrics } = useMetrics(clusterState);
   const { logs } = useLogs();
-  const { preview, status, podCounter } = useCluster();
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-50 p-6 font-sans selection:bg-zinc-800">
+    <div className="min-h-screen bg-bg text-text p-6 font-sans selection:bg-surface-raised">
       <div className="max-w-[1400px] mx-auto space-y-6">
         
-        <Header status={status} />
+        <Header status={status} clusterState={clusterState} />
 
         {/* Dashboard Grid - 3 Columns */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -28,7 +28,7 @@ export default function App() {
           <div className="flex flex-col gap-6 h-[600px]">
             <CpuChart metrics={metrics} currentMetrics={currentMetrics} />
             <MemoryChart metrics={metrics} currentMetrics={currentMetrics} />
-            <LivePreview preview={preview} />
+            <LivePreview preview={clusterState} />
           </div>
 
           {/* Column 2: Logs */}
@@ -37,19 +37,11 @@ export default function App() {
           {/* Column 3: Kubernetes Topology */}
           <TopologyPanel 
             status={status} 
-            podCounter={podCounter} 
-            currentMetrics={currentMetrics} 
+            clusterState={clusterState}
           />
 
         </div>
       </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        @keyframes slide {
-          from { transform: translateY(-50%); }
-          to { transform: translateY(0); }
-        }
-      `}} />
     </div>
   );
 }

@@ -8,11 +8,11 @@ export function useLogs() {
   useEffect(() => {
     const fetchLogs = async () => {
       try {
-        const res = await client.get('/logs');
+        const res = await client.get('/api/logs');
         setLogs(res.data.logs);
       } catch (err) {
         setLogs(prev => {
-          const msg = "FATAL: Lost connection to API. Kubernetes replacing Pod...";
+          const msg = "FATAL: Lost connection to controller API.";
           if (prev.length > 0 && prev[prev.length - 1].includes(msg)) return prev;
           return [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`];
         });

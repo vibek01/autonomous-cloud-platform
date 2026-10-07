@@ -6,25 +6,29 @@ import { PanelHeader } from './ui/PanelHeader';
 import { StatusChip } from './ui/StatusChip';
 import { Banner } from './ui/Banner';
 
-export function TopologyPanel({ status, podCounter, currentMetrics }) {
-  const maxLoad = Math.max(currentMetrics.cpu_usage, currentMetrics.memory_usage);
-  
-  let loadState = 'healthy';
-  let borderColorClass = "border-border";
-  if (maxLoad > THRESHOLD_WARN) {
-    loadState = 'warning';
-    borderColorClass = "border-warning-border";
-  }
-  if (maxLoad > THRESHOLD_DANGER) {
-    loadState = 'danger';
-    borderColorClass = "border-danger-border";
-  }
+function formatAge(seconds) {
+  if (seconds < 60) return `${seconds}s`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}m ${s}s`;
+}
 
+export function TopologyPanel({ status, clusterState }) {
   const getBarColorClass = (val) => {
     if (val > THRESHOLD_DANGER) return 'bg-danger';
     if (val > THRESHOLD_WARN) return 'bg-warning';
     return 'bg-success';
   };
+
+  const getPodBorderClass = (maxLoad) => {
+    if (maxLoad > THRESHOLD_DANGER) return 'border-danger-border';
+    if (maxLoad > THRESHOLD_WARN) return 'border-warning-border';
+    return 'border-border';
+  };
+
+  const pods = clusterState?.pods || [];
+  // Sort pods by name for consistent rendering
+  const sortedPods = [...pods].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <Panel className="h-[600px]">
@@ -39,18 +43,16 @@ export function TopologyPanel({ status, podCounter, currentMetrics }) {
         }
       />
       
-      <div className="flex-1 bg-bg p-6 flex flex-col items-center justify-start relative overflow-hidden">
+      <div className="flex-1 bg-bg p-6 flex flex-col items-center justify-start relative overflow-hidden overflow-y-auto">
         {/* Connection lost banner */}
         {status === 'error' && (
           <div className="absolute top-4 left-4 right-4 z-50">
-            <Banner message="Connection lost. Cluster may be replacing a crashed pod." type="danger" />
+            <Banner message="Connection lost to Controller API." type="danger" />
           </div>
         )}
 
-        {/* Subtle background grid pattern */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,var(--color-border)_1px,transparent_1px),linear-gradient(to_bottom,var(--color-border)_1px,transparent_1px)] bg-[size:24px_24px] opacity-20"></div>
         
-        {/* Load Balancer */}
         <div className={`bg-surface-raised border border-border px-6 py-3 rounded-lg flex items-center relative z-10 min-w-[220px] ${status === 'error' ? 'mt-16' : 'mt-4'}`}>
           <Globe className="w-5 h-5 text-accent mr-3" />
           <div>
@@ -59,78 +61,76 @@ export function TopologyPanel({ status, podCounter, currentMetrics }) {
           </div>
         </div>
 
-        {/* Dynamic Connection Lines & Pods */}
-        {status === 'healthy' ? (
+        {status === 'healthy' && sortedPods.length > 0 && (
           <>
-            <div className={`w-px h-16 bg-border relative z-0 transition-colors duration-500`}></div>
+            <div className="w-px h-8 bg-border relative z-0 transition-colors duration-500"></div>
             
-            {/* Active Pod */}
-            <div className={`w-full max-w-[280px] bg-surface-raised border rounded-lg p-4 transition-all duration-300 relative z-10 ${borderColorClass}`}>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center">
-                  <Server className="w-4 h-4 mr-2 text-text-muted" />
-                  <div className="font-mono text-[12px] font-medium text-text truncate">app-pod-{podCounter}</div>
-                </div>
-                <StatusChip status="Running" />
-              </div>
-              
-              <div className="space-y-3">
-                <div>
-                  <div className="flex justify-between items-center mb-1 font-mono text-[10px]">
-                    <span className="text-text-muted">CPU</span>
-                    <span className="text-text">{currentMetrics.cpu_usage.toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-surface h-1 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all duration-300 ${getBarColorClass(currentMetrics.cpu_usage)}`} style={{ width: `${Math.min(currentMetrics.cpu_usage, 100)}%` }}></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between items-center mb-1 font-mono text-[10px]">
-                    <span className="text-text-muted">RAM</span>
-                    <span className="text-text">{currentMetrics.memory_usage.toFixed(1)}%</span>
-                  </div>
-                  <div className="w-full bg-surface h-1 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all duration-300 ${getBarColorClass(currentMetrics.memory_usage)}`} style={{ width: `${Math.min(currentMetrics.memory_usage, 100)}%` }}></div>
-                  </div>
-                </div>
+            {/* Draw horizontal distribution line if multiple pods */}
+            {sortedPods.length > 1 && (
+              <div 
+                className="h-px bg-border relative z-0" 
+                style={{ width: `${Math.max(100, (sortedPods.length - 1) * 220)}px` }}
+              ></div>
+            )}
+            
+            {/* Draw vertical drops */}
+            {sortedPods.length > 1 && (
+               <div className="relative z-0 flex justify-between" style={{ width: `${Math.max(100, (sortedPods.length - 1) * 220)}px` }}>
+                 {sortedPods.map((_, i) => (
+                    <div key={i} className="w-px h-8 bg-border"></div>
+                 ))}
+               </div>
+            )}
+            {sortedPods.length === 1 && (
+               <div className="w-px h-8 bg-border relative z-0"></div>
+            )}
 
-                <div className="flex justify-between border-t border-border pt-2 mt-2">
-                   <div className="text-[9px] text-text-muted uppercase tracking-wider">Restarts: <span className="font-mono text-text">0</span></div>
-                   <div className="text-[9px] text-text-muted uppercase tracking-wider">Age: <span className="font-mono text-text">1m</span></div>
-                </div>
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* Crash State Routing */}
-            <div className="w-px h-8 bg-border relative z-0"></div>
-            <div className="w-[200px] h-px bg-border relative z-0 flex justify-between">
-              <div className="w-px h-8 bg-danger-border absolute left-0 top-0"></div>
-              <div className="absolute right-0 top-0 h-8 overflow-hidden flex flex-col w-px">
-                 <div className="w-full h-[200%] bg-[linear-gradient(to_bottom,var(--color-accent)_50%,transparent_50%)] bg-[length:1px_6px] animate-[slide_1s_linear_infinite]"></div>
-              </div>
-            </div>
+            <div className="flex justify-center gap-6 w-full flex-wrap relative z-10">
+              {sortedPods.map((pod) => {
+                const maxLoad = Math.max(pod.cpu_usage, pod.memory_usage);
+                const isPending = pod.phase === 'Pending';
+                const isFailed = pod.phase === 'Failed' || pod.lastTerminationReason === 'OOMKilled';
+                const opacityClass = isPending ? 'opacity-60 animate-pulse' : (isFailed ? 'opacity-50' : 'opacity-100');
 
-            <div className="flex gap-4 w-full px-4 mt-8 relative z-10 max-w-[400px]">
-              {/* Dead Pod */}
-              <div className="flex-1 bg-surface-raised border border-danger-border rounded-lg p-3 opacity-60">
-                <div className="flex items-center text-danger mb-2">
-                  <Server className="w-3.5 h-3.5 mr-1.5" />
-                  <span className="font-mono text-[11px] truncate">app-pod-{podCounter}</span>
-                </div>
-                <StatusChip status="OOMKilled" className="block text-center mt-2" />
-              </div>
+                return (
+                  <div key={pod.name} className={`w-full max-w-[240px] bg-surface-raised border rounded-lg p-4 transition-all duration-300 ${getPodBorderClass(maxLoad)} ${opacityClass}`}>
+                    <div className="flex justify-between items-center mb-4">
+                      <div className="flex items-center overflow-hidden mr-2">
+                        <Server className="w-4 h-4 mr-2 text-text-muted shrink-0" />
+                        <div className="font-mono text-[11px] font-medium text-text truncate" title={pod.name}>{pod.name}</div>
+                      </div>
+                      <StatusChip status={pod.phase === 'Running' && !pod.ready ? 'Starting' : (isFailed ? pod.lastTerminationReason || 'Failed' : pod.phase)} />
+                    </div>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between items-center mb-1 font-mono text-[10px]">
+                          <span className="text-text-muted">CPU</span>
+                          <span className="text-text">{pod.cpu_usage.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-surface h-1 rounded-full overflow-hidden">
+                          <div className={`h-full transition-all duration-300 ${getBarColorClass(pod.cpu_usage)}`} style={{ width: `${Math.min(pod.cpu_usage, 100)}%` }}></div>
+                        </div>
+                      </div>
+                      
+                      <div>
+                        <div className="flex justify-between items-center mb-1 font-mono text-[10px]">
+                          <span className="text-text-muted">RAM</span>
+                          <span className="text-text">{pod.memory_usage.toFixed(1)}%</span>
+                        </div>
+                        <div className="w-full bg-surface h-1 rounded-full overflow-hidden">
+                          <div className={`h-full transition-all duration-300 ${getBarColorClass(pod.memory_usage)}`} style={{ width: `${Math.min(pod.memory_usage, 100)}%` }}></div>
+                        </div>
+                      </div>
 
-              {/* Pending Pod */}
-              <div className="flex-1 bg-surface-raised border border-dashed border-accent-border rounded-lg p-3">
-                <div className="flex items-center text-accent mb-2">
-                  <Server className="w-3.5 h-3.5 mr-1.5" />
-                  <span className="font-mono text-[11px] truncate">app-pod-{podCounter + 1}</span>
-                </div>
-                <StatusChip status="Pending" className="block text-center mt-2 animate-pulse" />
-              </div>
+                      <div className="flex justify-between border-t border-border pt-2 mt-2">
+                         <div className="text-[9px] text-text-muted uppercase tracking-wider">Restarts: <span className="font-mono text-text">{pod.restartCount}</span></div>
+                         <div className="text-[9px] text-text-muted uppercase tracking-wider">Age: <span className="font-mono text-text">{formatAge(pod.ageSeconds)}</span></div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </>
         )}

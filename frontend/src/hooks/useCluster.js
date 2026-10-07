@@ -3,20 +3,18 @@ import client from '../api/client';
 import { POLL_INTERVAL_MS } from '../lib/constants';
 
 export function useCluster() {
-  const [preview, setPreview] = useState(null);
+  const [clusterState, setClusterState] = useState({ deployment: {}, pods: [] });
   const [status, setStatus] = useState('healthy');
-  const [podCounter, setPodCounter] = useState(1);
-  const [wasError, setWasError] = useState(false);
 
   useEffect(() => {
     const fetchCluster = async () => {
       try {
-        const res = await client.get('/');
+        const res = await client.get('/api/cluster');
         setStatus('healthy');
-        setPreview(res.data);
+        setClusterState(res.data);
       } catch (err) {
         setStatus('error');
-        setPreview({ error: "CONNECTION REFUSED" });
+        setClusterState({ deployment: {}, pods: [] });
       }
     };
     
@@ -25,14 +23,5 @@ export function useCluster() {
     return () => clearInterval(interval);
   }, []);
 
-  useEffect(() => {
-    if (status === 'error') {
-       setWasError(true);
-    } else if (status === 'healthy' && wasError) {
-       setWasError(false);
-       setPodCounter(prev => prev + 1);
-    }
-  }, [status, wasError]);
-
-  return { preview, status, podCounter };
+  return { clusterState, status };
 }
