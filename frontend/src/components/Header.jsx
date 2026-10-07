@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import client from '../api/client';
+import { Button } from './ui/Button';
 
 export function Header({ status }) {
-  const [loadingAction, setLoadingAction] = useState(false);
+  const [loadingAction, setLoadingAction] = React.useState(false);
 
   const injectChaos = async (type) => {
     setLoadingAction(true);
@@ -25,36 +26,43 @@ export function Header({ status }) {
   };
 
   return (
-    <header className="flex justify-between items-center border-b border-zinc-800 pb-5">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight text-zinc-100">
+    <header className="flex justify-between items-center h-12 border-b border-border mb-6">
+      <div className="flex items-center space-x-4">
+        <h1 className="text-[14px] font-medium tracking-tight text-text">
           Autonomous Cloud Platform
         </h1>
-        <p className="text-xs text-zinc-500 mt-1">Live Telemetry & Chaos Control</p>
+        <div className="h-4 w-px bg-border"></div>
+        <div className="flex items-center space-x-2 text-[11px] text-text-muted font-mono">
+          <span>minikube</span>
+          <span>/</span>
+          <span>default</span>
+        </div>
       </div>
       
-      <div className="flex gap-3">
-        <button 
+      <div className="flex items-center gap-2">
+        <Button 
           onClick={() => injectChaos('cpu')} 
           disabled={loadingAction || status === 'error'}
-          className="px-4 py-1.5 bg-blue-500/10 border border-blue-500/20 text-blue-400 hover:bg-blue-500/20 text-xs font-medium rounded transition-all disabled:opacity-50"
+          disabledReason="Cluster unavailable"
         >
           Spike CPU
-        </button>
-        <button 
+        </Button>
+        <Button 
           onClick={() => injectChaos('memory_continuous')} 
           disabled={loadingAction || status === 'error'}
-          className="px-4 py-1.5 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 hover:bg-indigo-500/20 text-xs font-medium rounded transition-all disabled:opacity-50"
+          disabledReason="Cluster unavailable"
         >
           Leak Memory
-        </button>
-        <button 
+        </Button>
+        <div className="h-4 w-px bg-border mx-2"></div>
+        <Button 
           onClick={recover} 
           disabled={loadingAction || status === 'error'}
-          className="px-4 py-1.5 bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-700 text-xs font-medium rounded transition-colors disabled:opacity-50 ml-4"
+          variant="primary"
+          disabledReason="Cluster unavailable"
         >
           Recover
-        </button>
+        </Button>
       </div>
     </header>
   );

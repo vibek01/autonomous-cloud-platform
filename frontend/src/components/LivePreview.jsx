@@ -1,22 +1,21 @@
 import React from 'react';
 import { Globe } from 'lucide-react';
+import { Panel } from './ui/Panel';
+import { PanelHeader } from './ui/PanelHeader';
 
 export function LivePreview({ preview }) {
   return (
-    <div className="bg-zinc-900 border border-zinc-800 rounded-xl overflow-hidden h-[96px] flex flex-col shrink-0 mt-auto">
-      <div className="border-b border-zinc-800 px-3 py-2 flex items-center bg-zinc-900/80">
-        <Globe className="w-3 h-3 text-zinc-500 mr-2" />
-        <span className="text-[10px] font-medium text-zinc-400 uppercase tracking-wider">API Response</span>
-      </div>
-      <div className="p-3 bg-[#09090b] font-mono text-[10px] flex-1 overflow-hidden flex items-center">
+    <Panel className="h-[96px] mt-auto">
+      <PanelHeader icon={Globe} title="API Response" />
+      <div className="p-3 bg-bg font-mono text-[10px] flex-1 overflow-hidden flex items-center text-text-muted">
         {preview ? (
-          <pre className={`${preview.error ? 'text-red-400' : 'text-zinc-400'}`}>
-            {JSON.stringify(preview, null, 2)}
+          <pre className={`${preview.error ? 'text-danger' : 'text-text-muted'} w-full overflow-hidden text-ellipsis whitespace-nowrap`}>
+            {JSON.stringify(preview)}
           </pre>
         ) : (
-          <span className="text-zinc-600">Loading...</span>
+          <span>Loading...</span>
         )}
       </div>
-    </div>
+    </Panel>
   );
 }
