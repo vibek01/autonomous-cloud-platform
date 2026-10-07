@@ -1,0 +1,2 @@
+# Enforce Unix line endings (LF) on bash scripts so they work on Windows (Git Bash)
+*.sh text eol=lf
