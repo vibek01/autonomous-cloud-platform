@@ -108,13 +108,27 @@ export function Header({ status, clusterState }) {
         >
           Spike CPU
         </Button>
-        <Button 
-          onClick={() => injectChaos('memory_continuous')} 
-          disabled={loadingAction || status === 'error'}
-          disabledReason="Cluster unavailable"
-        >
-          Leak Memory
-        </Button>
+        <div className="relative">
+          <select 
+            className="appearance-none bg-surface-raised border border-border text-text text-xs font-medium rounded-md px-4 py-1.5 pr-8 focus:outline-none focus:border-accent disabled:opacity-50 disabled:cursor-not-allowed hover:bg-surface-raised hover:border-border-strong transition-all cursor-pointer"
+            disabled={loadingAction || status === 'error'}
+            onChange={(e) => {
+              if (e.target.value) {
+                injectChaos(e.target.value);
+                e.target.value = ''; // reset
+              }
+            }}
+            value=""
+          >
+            <option value="" disabled>Leak Memory...</option>
+            <option value="memory_continuous">Slow Leak (Linear)</option>
+            <option value="memory_step">Step Leak</option>
+            <option value="memory_spike">Spike Leak</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-text-muted">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+          </div>
+        </div>
         <div className="h-4 w-px bg-border mx-2"></div>
         <Button 
           onClick={recover} 

@@ -125,6 +125,45 @@ async def start_continuous_leak(background_tasks: BackgroundTasks):
     background_tasks.add_task(continuous_memory_leak)
     return {"message": "Continuous leak started."}
 
+async def step_memory_leak():
+    add_log("CRITICAL: Step Memory Leak Thread Started.")
+    global memory_hog
+    limit_mb = get_cgroup_memory_limit() / (1024 * 1024)
+    while True:
+        junk_data = "A" * (20 * 1024 * 1024) # 20MB chunks
+        memory_hog.append(junk_data)
+        
+        current_mem = get_cgroup_memory_current() / (1024 * 1024)
+        add_log(f"WARNING: Memory expanding (STEP). Current RAM: {current_mem:.1f}MB / {limit_mb:.1f}MB Limit")
+        await asyncio.sleep(5) # 20MB every 5 seconds
+
+@app.post("/chaos/memory_step")
+async def start_step_leak(background_tasks: BackgroundTasks):
+    if not CHAOS_ENABLED:
+        raise HTTPException(status_code=403, detail="Chaos endpoints are disabled")
+    add_log("USER ACTION: Injecting step memory leak.")
+    background_tasks.add_task(step_memory_leak)
+    return {"message": "Step leak started."}
+
+async def spike_memory_leak():
+    add_log("CRITICAL: Spike Memory Leak Thread Started.")
+    global memory_hog
+    limit_mb = get_cgroup_memory_limit() / (1024 * 1024)
+    # Instant 100MB spike
+    junk_data = "A" * (100 * 1024 * 1024) 
+    memory_hog.append(junk_data)
+    
+    current_mem = get_cgroup_memory_current() / (1024 * 1024)
+    add_log(f"WARNING: Memory expanding (SPIKE). Current RAM: {current_mem:.1f}MB / {limit_mb:.1f}MB Limit")
+
+@app.post("/chaos/memory_spike")
+async def start_spike_leak(background_tasks: BackgroundTasks):
+    if not CHAOS_ENABLED:
+        raise HTTPException(status_code=403, detail="Chaos endpoints are disabled")
+    add_log("USER ACTION: Injecting spike memory leak.")
+    background_tasks.add_task(spike_memory_leak)
+    return {"message": "Spike leak started."}
+
 def cpu_intensive_task():
     global cpu_stress_active
     cpu_stress_active = True
