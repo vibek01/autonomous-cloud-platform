@@ -1,4 +1,10 @@
 #!/bin/bash
+echo "================================================================"
+echo "⚠️  DEPRECATED: Please use scripts/dev-up.sh instead!"
+echo "This tunnel script pins to a single pod and defeats load balancing."
+echo "================================================================"
+sleep 2
+
 while true; do
   echo "Starting port-forward..."
   kubectl port-forward svc/autonomous-api-service 8000:80 &
