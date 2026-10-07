@@ -7,6 +7,10 @@ from datetime import datetime
 from .k8s_client import k8s_client
 from .scraper import scraper
 from .events import event_log
+from .prober import prober
+from .healer import healer
+from .explainer import explainer
+import httpx
 
 app = FastAPI(title="Autonomous Cloud Controller")
 
@@ -20,11 +24,13 @@ app.add_middleware(
 @app.on_event("startup")
 async def startup_event():
     await scraper.start()
+    await prober.start()
     event_log.add_event("Controller started and scraper initialized", level="INFO")
 
 @app.on_event("shutdown")
 async def shutdown_event():
     await scraper.stop()
+    await prober.stop()
 
 @app.get("/api/health")
 def health_check():
@@ -66,12 +72,15 @@ def get_cluster_state():
             "cpu_usage": metrics.get("cpu_usage", 0),
             "memory_usage": metrics.get("memory_usage", 0),
             "memory_mb": metrics.get("memory_mb", 0),
-            "limit_mb": metrics.get("limit_mb", 150)
+            "limit_mb": metrics.get("limit_mb", 150),
+            "ai": scraper.ai_state.get(name, {})
         })
 
     return {
         "deployment": state,
-        "pods": pod_details
+        "pods": pod_details,
+        "strategy": healer.strategy,
+        "downtime_events": prober.downtime_events
     }
 
 class ScaleRequest(BaseModel):
@@ -121,3 +130,49 @@ def get_merged_logs():
 @app.get("/api/events")
 def get_events():
     return {"events": event_log.get_events()}
+
+class StrategyRequest(BaseModel):
+    strategy: str
+
+@app.post("/api/strategy")
+def set_strategy(req: StrategyRequest):
+    if req.strategy not in ['reactive', 'threshold', 'predictive']:
+        raise HTTPException(status_code=400, detail="Invalid strategy")
+    healer.set_strategy(req.strategy)
+    return {"status": "success", "strategy": req.strategy}
+
+@app.post("/api/chaos/{chaos_type}")
+async def inject_chaos(chaos_type: str):
+    # Proxy to one of the pods, doesn't matter which one for now, or broadcast
+    pods = k8s_client.get_pods()
+    if not pods:
+        raise HTTPException(status_code=404, detail="No pods available")
+    
+    # Just send to the first available pod's IP directly
+    for pod in pods:
+        if pod.status.pod_ip:
+            url = f"http://{pod.status.pod_ip}:8000/chaos/{chaos_type}"
+            try:
+                async with httpx.AsyncClient() as client:
+                    resp = await client.post(url)
+                    if resp.status_code == 200:
+                        return resp.json()
+            except Exception as e:
+                continue
+    
+    raise HTTPException(status_code=500, detail="Failed to inject chaos")
+
+@app.get("/api/explain/{pod_name}")
+def get_explanation(pod_name: str):
+    metrics = scraper.pod_metrics.get(pod_name, {})
+    ai = scraper.ai_state.get(pod_name, {})
+    if not metrics or not ai:
+        raise HTTPException(status_code=404, detail="No data for pod")
+        
+    explanation = explainer.explain(
+        pod_name, 
+        metrics, 
+        ai.get("prediction", {}), 
+        ai.get("anomaly_score", 1.0)
+    )
+    return {"explanation": explanation}

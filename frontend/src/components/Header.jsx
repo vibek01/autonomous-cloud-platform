@@ -2,6 +2,7 @@ import React from 'react';
 import client from '../api/client';
 import { Button } from './ui/Button';
 import { Slider } from './ui/Slider';
+import { SegmentedControl } from './ui/SegmentedControl';
 
 export function Header({ status, clusterState }) {
   const [loadingAction, setLoadingAction] = React.useState(false);
@@ -80,8 +81,26 @@ export function Header({ status, clusterState }) {
           />
         </div>
       </div>
-      
       <div className="flex items-center gap-2">
+        <div className="flex flex-col items-end mr-4 border-r border-border pr-4">
+          <span className="text-[10px] text-text-muted uppercase tracking-wider mb-1 font-medium">Strategy</span>
+          <SegmentedControl 
+            options={[
+              { label: 'Reactive', value: 'reactive' },
+              { label: 'Threshold', value: 'threshold' },
+              { label: 'Predictive', value: 'predictive' },
+            ]}
+            value={clusterState?.strategy || 'reactive'}
+            onChange={async (val) => {
+              try {
+                await client.post('/api/strategy', { strategy: val });
+              } catch (e) {
+                console.error("Strategy change failed", e);
+              }
+            }}
+          />
+        </div>
+
         <Button 
           onClick={() => injectChaos('cpu')} 
           disabled={loadingAction || status === 'error'}

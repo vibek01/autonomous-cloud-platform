@@ -10,6 +10,8 @@ logger = logging.getLogger(__name__)
 class Scraper:
     def __init__(self):
         self.pod_metrics = {}
+        self.pod_history = {}
+        self.ai_state = {}
         self.client = httpx.AsyncClient(timeout=1.0)
         self.running = False
 
@@ -28,6 +30,9 @@ class Scraper:
             
             # Clean up old pods
             self.pod_metrics = {k: v for k, v in self.pod_metrics.items() if k in current_pod_names}
+            for name in current_pod_names:
+                if name not in self.pod_history:
+                    self.pod_history[name] = []
 
             tasks = []
             for pod in pods:
@@ -48,13 +53,42 @@ class Scraper:
             resp = await self.client.get(url)
             if resp.status_code == 200:
                 data = resp.json()
-                self.pod_metrics[name] = {
+                
+                # Update current metrics
+                metric_point = {
                     "time": datetime.now().isoformat(),
                     "cpu_usage": data.get("cpu_usage", 0),
                     "memory_usage": data.get("memory_usage", 0),
                     "memory_mb": data.get("memory_mb", 0),
                     "limit_mb": data.get("limit_mb", 150)
                 }
+                self.pod_metrics[name] = metric_point
+                
+                # Update history (keep last 60 samples ~ 30 seconds)
+                self.pod_history[name].append(metric_point)
+                if len(self.pod_history[name]) > 60:
+                    self.pod_history[name].pop(0)
+
+                # ML / AI pipeline
+                from .predictor import predictor
+                from .anomaly import anomaly_detector
+                from .healer import healer
+
+                prediction = predictor.predict(self.pod_history[name])
+                
+                features = [metric_point["cpu_usage"], metric_point["memory_usage"]]
+                anomaly_score = anomaly_detector.score(features)
+                
+                # Store AI state
+                self.ai_state[name] = {
+                    "prediction": prediction,
+                    "anomaly_score": anomaly_score,
+                    "healer_state": healer.pod_states.get(name, "HEALTHY")
+                }
+                
+                # Trigger healer
+                await healer.evaluate_pod(name, metric_point, prediction, anomaly_score)
+
         except Exception as e:
             logger.debug(f"Failed to scrape {name}: {e}")
 
