@@ -9,15 +9,11 @@ if ! minikube status > /dev/null 2>&1; then
     minikube start
 fi
 
-# 2. Point to minikube docker-env
-echo "🐳 Configuring Docker env..."
-eval $(minikube docker-env)
-
-# 3. Build images
+# 2. Build images natively inside minikube (avoids buildkit errors)
 echo "🔨 Building app image..."
-docker build -t autonomous-api:latest ./app
+minikube image build -t autonomous-api:latest ./app
 echo "🔨 Building controller image..."
-docker build -t autonomous-controller:latest ./controller
+minikube image build -t autonomous-controller:latest ./controller
 
 # 4. Apply K8s manifests
 echo "☸️ Applying Kubernetes manifests..."
@@ -28,16 +24,16 @@ echo "⏳ Waiting for deployments to roll out..."
 kubectl rollout status deployment/autonomous-api-deployment
 kubectl rollout status deployment/autonomous-controller
 
-# 6. Expose services and get URLs
-echo "🌐 Getting service URLs..."
-if [ "$OS" = "Windows_NT" ] || uname -a | grep -i microsoft > /dev/null; then
-    echo "⚠️ Detected Windows / WSL. You might need to run 'minikube tunnel' in a separate admin window if services are unreachable."
-fi
+# 6. Start Port Forwards
+echo "🌐 Starting port-forward tunnels..."
+# Kill any existing port-forwards
+pkill -f "kubectl port-forward" || true
 
-APP_URL=$(minikube service autonomous-api-service --url | head -n 1)
-CONTROLLER_URL=$(minikube service autonomous-controller-service --url | head -n 1)
+kubectl port-forward svc/autonomous-api-service 8000:80 > /dev/null 2>&1 &
+kubectl port-forward svc/autonomous-controller-service 8001:80 > /dev/null 2>&1 &
 
-echo "✅ App Service URL: $APP_URL"
+CONTROLLER_URL="http://localhost:8001"
+echo "✅ App Service URL: http://localhost:8000"
 echo "✅ Controller Service URL: $CONTROLLER_URL"
 
 # 7. Start Vite

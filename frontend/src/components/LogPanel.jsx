@@ -29,8 +29,12 @@ export function LogPanel({ logs, clusterState }) {
           const newExplanations = {};
           if (clusterState?.pods) {
             for (const pod of clusterState.pods) {
-              const res = await client.get(`/api/explain/${pod.name}`);
-              newExplanations[pod.name] = res.data.explanation;
+              try {
+                const res = await client.get(`/api/explain/${pod.name}`);
+                newExplanations[pod.name] = res.data.explanation;
+              } catch (err) {
+                newExplanations[pod.name] = `Waiting for AI analysis (gathering data points)...`;
+              }
             }
           }
           setExplanations(newExplanations);

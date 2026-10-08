@@ -32,7 +32,7 @@ export default function App() {
           </div>
 
           {/* Column 2: Logs */}
-          <LogPanel logs={logs} />
+          <LogPanel logs={logs} clusterState={clusterState} />
 
           {/* Column 3: Kubernetes Topology */}
           <TopologyPanel 

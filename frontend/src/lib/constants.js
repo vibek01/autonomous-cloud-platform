@@ -1,4 +1,4 @@
-export const API_BASE = 'http://localhost:8000';
+export const API_BASE = '';
 export const POLL_INTERVAL_MS = 1000;
 export const MAX_METRICS_POINTS = 30;
 export const MAX_LOGS = 50;

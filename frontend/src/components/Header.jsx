@@ -86,9 +86,7 @@ export function Header({ status, clusterState }) {
           <span className="text-[10px] text-text-muted uppercase tracking-wider mb-1 font-medium">Strategy</span>
           <SegmentedControl 
             options={[
-              { label: 'Reactive', value: 'reactive' },
-              { label: 'Threshold', value: 'threshold' },
-              { label: 'Predictive', value: 'predictive' },
+              { label: 'Predictive (AI)', value: 'predictive' },
             ]}
             value={clusterState?.strategy || 'reactive'}
             onChange={async (val) => {

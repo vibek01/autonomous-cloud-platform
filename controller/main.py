@@ -43,6 +43,8 @@ def get_cluster_state():
     
     pod_details = []
     for pod in pods:
+        if pod.metadata.deletion_timestamp:
+            continue
         name = pod.metadata.name
         metrics = scraper.pod_metrics.get(name, {})
         
