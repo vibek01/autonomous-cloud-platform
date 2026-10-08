@@ -1,14 +1,19 @@
 # Autonomous Cloud Platform
 
-A real-time dashboard and control plane that demonstrates Kubernetes self-healing and chaos engineering, upgraded with AI-driven predictive capabilities. 
-
-Built for a 4th-year CSE final-year project.
+A real-time dashboard and control plane that demonstrates AI-driven Kubernetes self-healing and chaos engineering. Built for a 4th-year CSE final-year project.
 
 ## Architecture
 
 1. **Frontend:** React + Vite, styled with modern Tailwind CSS v4 design tokens.
 2. **App (Backend):** FastAPI python service that reports its own resource usage and allows injecting memory/CPU chaos.
-3. **Controller:** FastAPI python service running inside Kubernetes that aggregates cluster state, scrapes pod metrics, and orchestrates predictive healing and anomaly detection.
+3. **Controller:** FastAPI python service running inside Kubernetes that aggregates cluster state, scrapes pod metrics, and orchestrates predictive healing and anomaly detection using Machine Learning.
+
+## Core Capabilities
+
+- **Predictive Auto-Healing (Memory):** Uses a Linear Regression ML model to predict when a pod will experience an Out-of-Memory (OOM) crash due to a memory leak.
+- **Anomaly Detection (CPU):** Uses an Isolation Forest ML model to instantly identify irregular compute usage patterns like infinite loops or CPU spikes.
+- **Zero-Downtime Failover:** Automatically scales up a healthy replacement pod, waits for it to become ready, and cleanly destroys the degraded pod before users experience any downtime or dropped requests.
+- **AI Reasoning Dashboard:** Exposes the raw ML decision-making logs in real-time on the frontend UI.
 
 ## Prerequisites
 
@@ -18,9 +23,9 @@ Built for a 4th-year CSE final-year project.
 
 ## How to Run
 
-### Option 1: Automated Dev Environment (Recommended)
+### Automated Dev Environment (Recommended)
 
-Run the automated startup script. This will start Minikube (if not running), build the Docker images locally, apply Kubernetes manifests, wait for deployment, and start the frontend dashboard.
+Run the automated startup script. This will start Minikube (if not running), build the Docker images locally, apply Kubernetes manifests, wait for deployment, establish tunnels, and start the frontend dashboard.
 
 ```bash
 # On Linux/macOS or Git Bash (Windows)
@@ -33,59 +38,15 @@ To tear down the environment:
 ./scripts/dev-down.sh
 ```
 
-### Option 2: Manual Setup
-
-If you prefer to run the steps manually:
-
-1. **Start Minikube and point Docker env:**
-   ```bash
-   minikube start
-   eval $(minikube docker-env)
-   ```
-
-2. **Build images:**
-   ```bash
-   docker build -t autonomous-api:latest ./app
-   docker build -t autonomous-controller:latest ./controller
-   ```
-
-3. **Deploy to Kubernetes:**
-   ```bash
-   kubectl apply -f k8s/
-   ```
-
-4. **Start Frontend:**
-   ```bash
-   # Get the controller URL
-   minikube service autonomous-controller-service --url
-   
-   # Set the environment variable and start Vite
-   export VITE_CONTROLLER_URL=<url-from-above>
-   cd frontend
-   npm install
-   npm run dev
-   ```
-
 ## Demo Guide for Presentation
 
-This platform allows you to demonstrate three distinct stages of cloud maturity:
+This platform allows you to demonstrate intelligent cloud infrastructure maturity.
 
-### 1. Reactive Mode (Kubernetes Native)
-1. Select **Reactive** strategy in the dashboard.
-2. Inject a **Spike Leak** or **Step Leak**.
-3. *Observation:* You will see memory usage rise until it hits 150MB. Kubernetes will forcefully `OOMKill` the pod. The platform experiences downtime until the pod restarts.
+### 1. Memory Leak Healing
+1. Check the **AI Reasoning** tab in the Intelligence Panel to see the AI evaluating normal pod patterns.
+2. Inject a **Slow Leak (Linear)** using the dashboard controls.
+3. *Observation:* The linear regression model detects the leak trajectory. The AI accurately predicts the ETA until the pod crashes (150MB limit). At exactly 60% memory capacity, the AI preemptively provisions a replacement pod, reroutes traffic, and deletes the leaking pod—ensuring zero downtime.
 
-### 2. Threshold Mode (Heuristic Healing)
-1. Select **Threshold** strategy.
-2. Inject a **Slow Leak**.
-3. *Observation:* When memory crosses 75%, the controller provisions a replacement pod *before* the original crashes, reroutes traffic, and deletes the leaking pod. Zero downtime.
-
-### 3. Predictive Mode (AI-Driven)
-1. Select **Predictive** strategy.
-2. Check the **AI Reasoning** tab in the Intelligence Panel.
-3. Inject a **Slow Leak**.
-4. *Observation:* The linear regression model detects the leak early, predicting the OOMKill. The Isolation Forest model confirms the anomaly. The system preemptively heals the cluster long before the 75% threshold is reached.
-
-## Notes on Compatibility
-- The frontend proxy is configured to forward `/api` to the controller.
-- Windows users using WSL/Git Bash may need to run `minikube tunnel` if NodePort services are unreachable.
+### 2. CPU Spike Healing
+1. Inject a **Spike CPU** payload from the dashboard controls.
+2. *Observation:* The Isolation Forest model instantly detects that the compute resource pattern is anomalous (Score < 0). The AI flags a suspected CPU Spike or Deadlock and immediately triggers the zero-downtime failover process.
